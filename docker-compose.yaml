@@ -33,7 +33,7 @@ services:
     container_name: nextcloud-aio-cloudflare
     networks:
       - nextcloud-aio
-    restart: 'no'
+    restart: 'unless-stopped'
     command: 'tunnel --no-autoupdate run'
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
