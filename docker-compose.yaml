@@ -1,46 +1,40 @@
-version: '3.8'
+version: "3.8"
+
 services:
-  nextcloud-aio-mastercontainer:
-    image: 'docker.arvancloud.ir/nextcloud/all-in-one:latest'
+  nginx:
+    image: docker.arvancloud.ir/nginx:alpine
+    container_name: nextcloud-nginx
     restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - nextcloud-aio
+    depends_on:
+      - nextcloud-aio-mastercontainer
+
+  nextcloud-aio-mastercontainer:
+    image: docker.arvancloud.ir/nextcloud/all-in-one:latest
     container_name: nextcloud-aio-mastercontainer
+    restart: always
     init: true
     volumes:
-      - 'nextcloud_aio_mastercontainer:/mnt/docker-aio-config'
-      - '/var/run/docker.sock:/var/run/docker.sock:ro'
-      # - '/opt/nextcloud-aio/data:/mnt/ncdata:rw'
+      - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-#      - '11000:80' # apache interface, not usefull with cloudflare
-#      - '11002:80' # apache interface, not usefull with cloudflare
-      - '11001:8080' # interface AIO, port for http, mastercontainer, interface admin, don't show if internal network
-#      - '10999:8443' # HTTPS AIO (certificats Let's Encrypt si besoin, masquer si passe par tunnel cloudflare)
+      - "127.0.0.1:11001:8080"
     environment:
-      - APACHE_PORT=${APACHE_PORT:-11000}
-      - APACHE_IP_BINDING=${APACHE_IP_BINDING:-0.0.0.0}
-      - POSTGRES_DB=${POSTGRES_DB:-nextcloud}
-      - POSTGRES_USER=${POSTGRES_USER:-nextcloud}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-EW#5tmg$WlVm}
+      - APACHE_PORT=11000
+      - APACHE_IP_BINDING=0.0.0.0
       - SKIP_DOMAIN_VALIDATION=true
-      - NEXTCLOUD_MEMORY_LIMIT=${NEXTCLOUD_MEMORY_LIMIT:-1024M}
-      # - NEXTCLOUD_DATADIR=${NEXTCLOUD_DATADIR:-/mnt/ncdata}
-      # - TALK_PORT=3478
+      - NEXTCLOUD_MEMORY_LIMIT=1024M
     networks:
       - nextcloud-aio
 
-  cloudflare-tunnel:
-    # service : http://nextcloud-aio-mastercontainer:11002
-    image: 'docker.arvancloud.ir/cloudflare/cloudflared:latest'
-    container_name: nextcloud-aio-cloudflare
-    networks:
-      - nextcloud-aio
-    restart: 'unless-stopped'
-    command: 'tunnel --no-autoupdate run'
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
-      
 volumes:
   nextcloud_aio_mastercontainer:
-    external: true
+
 networks:
   nextcloud-aio:
-    external: true
+    name: nextcloud-aio
